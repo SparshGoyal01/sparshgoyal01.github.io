@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Embedded Lending API — Sparsh Goyal</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../css/style.css">
+</head>
+<body>
+
+<nav class="nav">
+  <div class="nav-inner">
+    <a href="../My%20Portfolio.html" class="nav-logo">Sparsh<span>.</span></a>
+    <div class="nav-links">
+      <a href="../My%20Portfolio.html#about">About</a>
+      <a href="../My%20Portfolio.html#experience">Experience</a>
+      <a href="../My%20Portfolio.html#work">Case Studies</a>
+      <a href="../My%20Portfolio.html#skills">Skills</a>
+      <a href="../My%20Portfolio.html#contact">Contact</a>
+    </div>
+    <div class="nav-cta">
+      <a href="../assets/Sparsh_Goyal_Resume.docx" class="btn btn-outline" download>Resume</a>
+      <button class="nav-toggle" aria-label="Toggle menu"><span></span><span></span><span></span></button>
+    </div>
+  </div>
+</nav>
+
+<header class="cs-hero">
+  <div class="container">
+    <a href="../My%20Portfolio.html#work" class="cs-back">← Back to case studies</a>
+    <div class="eyebrow">InCred Finance · B2B Partnerships</div>
+    <h1>An embedded lending API for B2B partners</h1>
+    <div class="cs-hero-meta">
+      <div><b>Role</b>Product Manager</div>
+      <div><b>Timeline</b>May 2024 — Nov 2024</div>
+      <div><b>Team</b>Engineering, Partner Integrations, Risk</div>
+      <div><b>Scope</b>D2C Personal Loans, B2B partner channel</div>
+    </div>
+  </div>
+</header>
+
+<div class="container">
+  <div class="cs-stats">
+    <div class="cs-stat"><b>30%</b><span>reduction in top-of-funnel drop-off</span></div>
+    <div class="cs-stat"><b>SDUI</b><span>framework for interoperable journeys</span></div>
+    <div class="cs-stat"><b>100+</b><span>user interviews conducted</span></div>
+    <div class="cs-stat"><b>~85%</b><span>of H1/H2 2024 roadmap delivered</span></div>
+  </div>
+
+  <div class="cs-body">
+    <h2>Overview</h2>
+    <p>Prior to this, users applying for a personal loan through a partner platform were redirected off that platform to complete their application — a jarring handoff that cost conversions. I led building an Embedded PL Lending API stack that let partner platforms host the entire loan application journey natively, as part of InCred's broader D2C Personal Loans initiative.</p>
+
+    <h2>The challenge</h2>
+    <p>Every redirect to a separate application flow is a point where a user can abandon. For B2B partners distributing InCred's personal loan product, sending users off-platform to finish applying was actively working against conversion — and it made the partner's own product experience feel disjointed.</p>
+
+    <h2>My approach</h2>
+    <ul>
+      <li>Designed an API stack that exposed InCred's loan application journey as embeddable building blocks, rather than a single external redirect.</li>
+      <li>Used a <strong>Server-Driven UI (SDUI)</strong> framework so the same underlying journey could render natively across different partner surfaces (web and app) without a separate rebuild per partner.</li>
+      <li>Worked with Fraud & Risk Analytics to carry the same ML-based risk control layers (SMS Scorecard, Behavioral Data Scorecard) into the embedded flow, so partner-originated loans didn't compromise on NPA performance.</li>
+      <li>Grounded the design in 100+ user interviews and in-house usability sessions, plus structured A/B testing, to validate where in the embedded flow users were dropping off.</li>
+    </ul>
+
+    <div class="cs-callout">
+      This shipped alongside the broader D2C PL rebuild — interoperable web & app journeys via the same SDUI framework — and fed into delivering ~85% of the planned H1/H2 2024 roadmap.
+    </div>
+
+    <h2>Impact</h2>
+    <p>Embedding the application journey directly into partner platforms cut top-of-funnel drop-off by 30%, turning what had been a leaky handoff into a contained, native experience for partner-originated loans.</p>
+
+    <div class="note-card">
+      <b>Draft note:</b> This case study is seeded from resume bullet points. To strengthen it, add: a simple diagram of the redirect flow vs. the embedded flow, one concrete example of a partner integration, and what "top-of-funnel" specifically meant here (which step the 30% was measured against).
+    </div>
+  </div>
+
+  <div class="cs-nextprev">
+    <a href="omnichannel-personal-loans.html">← Omnichannel PL</a>
+    <a href="../My%20Portfolio.html#work">All case studies →</a>
+  </div>
+</div>
+
+<footer>
+  <div class="container">© 2026 Sparsh Goyal. Built with care.</div>
+</footer>
+
+<script src="../js/script.js"></script>
+</body>
+</html>
