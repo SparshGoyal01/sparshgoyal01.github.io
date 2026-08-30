@@ -1,0 +1,745 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+<title>Wordle Ourselves</title>
+<meta name="description" content="A daily word game — enter your name, pick a grid (5×5 to 8×8), beat the clock, and top today's leaderboard." />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@600;700&display=swap" rel="stylesheet" />
+<style>
+  :root{
+    --bg:#0f1115; --panel:#171a21; --panel-2:#1e222b; --line:#2a2f3a;
+    --text:#e8eaed; --muted:#9aa1ac; --faint:#6b7280;
+    --absent:#3a3f4b; --present:#c8a02c; --correct:#3aa757; --accent:#6ea8fe;
+    --key:#2b303b; --key-text:#e8eaed;
+    --radius:12px; --tile:clamp(28px, calc(86vw / var(--n, 5)), 60px);
+  }
+  *{box-sizing:border-box; margin:0; padding:0}
+  html,body{height:100%}
+  body{
+    background:var(--bg); color:var(--text);
+    font-family:'Inter',system-ui,-apple-system,Segoe UI,Roboto,sans-serif;
+    display:flex; flex-direction:column; align-items:center;
+    min-height:100dvh; overflow-x:hidden;
+  }
+
+  /* ---------- view routing ---------- */
+  .view{ display:none; width:100%; max-width:560px; min-height:100dvh; padding:0 14px 28px; flex-direction:column; }
+  .view.active{ display:flex; }
+  #view-home.active{ justify-content:center; }
+
+  .brand{ font-size:15px; font-weight:800; letter-spacing:.16em; text-transform:uppercase; display:flex; align-items:center; gap:8px; }
+  .brand .sq{ width:12px; height:12px; border-radius:3px; background:var(--correct); }
+
+  /* ---------- HOME ---------- */
+  .home{ background:var(--panel); border:1px solid var(--line); border-radius:18px; padding:22px; margin:22px 0; }
+  .home h1{ font-size:21px; letter-spacing:.12em; text-transform:uppercase; display:flex; align-items:center; gap:9px; }
+  .home h1 .sq{ width:14px; height:14px; border-radius:3px; background:var(--correct); }
+  .home .tagline{ color:var(--muted); font-size:13px; margin:8px 0 4px; line-height:1.55; }
+  label.fld{ display:block; font-size:11px; text-transform:uppercase; letter-spacing:.07em; color:var(--faint); margin:20px 0 8px; font-weight:700; }
+  input[type=text]{
+    width:100%; background:var(--panel-2); border:1px solid var(--line); border-radius:10px;
+    padding:12px 13px; color:var(--text); font:inherit; font-size:15px;
+  }
+  input[type=text]:focus{ outline:none; border-color:var(--accent); }
+
+  .levels{ display:grid; grid-template-columns:repeat(4,1fr); gap:8px; }
+  .level{
+    background:var(--panel-2); border:1px solid var(--line); border-radius:var(--radius);
+    padding:12px 5px; text-align:center; cursor:pointer; transition:.12s; position:relative; color:var(--text); font:inherit;
+  }
+  .level:hover{ border-color:var(--faint); }
+  .level.active{ border-color:var(--accent); background:#232838; }
+  .level.done{ opacity:.85; cursor:pointer; }
+  .level b{ display:block; font-size:17px; font-weight:800; }
+  .level span{ display:block; font-size:10px; color:var(--muted); margin-top:3px; letter-spacing:.02em; text-transform:lowercase; }
+  .level .badge{
+    position:absolute; top:-7px; right:-7px; min-width:19px; height:19px; padding:0 3px; border-radius:10px;
+    font-size:11px; font-weight:800; display:grid; place-items:center; color:#0f1115;
+  }
+  .level .badge.win{ background:var(--correct); }
+  .level .badge.loss{ background:#c0554b; color:#fff; }
+
+  .instructions{ background:var(--panel-2); border:1px solid var(--line); border-radius:12px; padding:12px 14px; margin-top:22px; font-size:13px; }
+  .instructions summary{ cursor:pointer; font-weight:700; list-style:none; display:flex; justify-content:space-between; }
+  .instructions summary::-webkit-details-marker{ display:none; }
+  .instructions summary::after{ content:"▾"; color:var(--faint); }
+  .instructions[open] summary::after{ content:"▴"; }
+  .instructions ul{ list-style:none; margin:12px 0 2px; }
+  .instructions li{ margin:7px 0; color:var(--muted); line-height:1.5; }
+  .swatch{ display:inline-grid; place-items:center; width:19px; height:19px; border-radius:4px; color:#fff; font-size:11px; font-weight:700; vertical-align:middle; margin-right:6px; font-family:'JetBrains Mono',monospace; }
+
+  .btn{
+    width:100%; background:var(--accent); color:#0b1220; border:0; border-radius:10px;
+    padding:14px; font:inherit; font-weight:800; font-size:14px; letter-spacing:.08em; cursor:pointer; margin-top:20px;
+  }
+  .btn:disabled{ opacity:.4; cursor:not-allowed; }
+  .btn.secondary{ background:var(--panel-2); color:var(--text); border:1px solid var(--line); letter-spacing:.04em; font-weight:700; }
+  .home-allplayed{ text-align:center; font-size:12.5px; color:var(--muted); margin-top:12px; }
+  .home-allplayed a{ color:var(--accent); }
+
+  /* ---------- GAME ---------- */
+  .game-head{ display:flex; align-items:center; gap:12px; padding:16px 2px 12px; }
+  #quitBtn{
+    background:var(--panel); border:1px solid var(--line); color:var(--text); width:34px; height:34px;
+    border-radius:9px; cursor:pointer; font-size:16px; display:grid; place-items:center;
+  }
+  .game-head .lvl{ font-weight:800; letter-spacing:.08em; font-size:15px; }
+  .timer{ margin-left:auto; font-family:'JetBrains Mono',monospace; font-weight:700; font-size:18px; }
+  .timer.paused{ color:var(--faint); }
+  .statusbar{ font-size:13px; color:var(--muted); min-height:18px; margin-bottom:10px; }
+
+  .board-wrap{ display:flex; justify-content:center; margin-bottom:14px; }
+  .board{ display:grid; gap:5px; }
+  .row{ display:grid; grid-template-columns:repeat(var(--n),1fr); gap:5px; }
+  .tile{
+    width:var(--tile); height:var(--tile); border:2px solid var(--line); border-radius:6px;
+    display:grid; place-items:center; font-family:'JetBrains Mono',monospace; font-weight:700;
+    font-size:calc(var(--tile) * .46); text-transform:uppercase; user-select:none; color:var(--text); background:transparent;
+  }
+  .tile.filled{ border-color:var(--faint); animation:pop .1s; }
+  .tile.reveal{ animation:flip .5s ease forwards; }
+  .tile.correct{ background:var(--correct); border-color:var(--correct); color:#fff; }
+  .tile.present{ background:var(--present); border-color:var(--present); color:#fff; }
+  .tile.absent{ background:var(--absent); border-color:var(--absent); color:#fff; }
+  .row.shake{ animation:shake .4s; }
+  @keyframes pop{0%{transform:scale(.9)}100%{transform:scale(1)}}
+  @keyframes flip{0%{transform:rotateX(0)}45%{transform:rotateX(90deg)}100%{transform:rotateX(0)}}
+  @keyframes shake{10%,90%{transform:translateX(-2px)}30%,70%{transform:translateX(-5px)}50%{transform:translateX(5px)}}
+
+  .kb{ display:flex; flex-direction:column; gap:6px; margin-top:auto; padding-top:8px; }
+  .kb-row{ display:flex; gap:5px; justify-content:center; }
+  .key{
+    flex:1; max-width:42px; height:52px; border:0; border-radius:7px; background:var(--key); color:var(--key-text);
+    font-family:inherit; font-weight:700; font-size:13px; text-transform:uppercase; cursor:pointer; display:grid; place-items:center;
+  }
+  .key:active{ transform:translateY(1px); }
+  .key.wide{ max-width:66px; font-size:11px; }
+  .key.correct{ background:var(--correct); color:#fff; }
+  .key.present{ background:var(--present); color:#fff; }
+  .key.absent{ background:var(--absent); color:#8b8f98; }
+
+  /* ---------- RESULT / LEADERBOARD ---------- */
+  #view-result{ padding-top:16px; }
+  #view-result > .brand{ margin-bottom:16px; }
+  .banner{ border:1px solid var(--line); background:var(--panel); border-radius:14px; padding:17px; text-align:center; margin-bottom:20px; }
+  .banner.win{ border-color:var(--correct); }
+  .banner .t{ font-size:18px; font-weight:800; }
+  .banner .w{ font-family:'JetBrains Mono',monospace; letter-spacing:.16em; text-transform:uppercase; color:var(--accent); font-size:15px; margin-top:3px; }
+  .banner .m{ color:var(--muted); font-size:13px; margin-top:6px; }
+  .banner .grid{ font-family:'JetBrains Mono',monospace; font-size:12px; line-height:1.18; margin-top:11px; white-space:pre; }
+  .banner .share{ margin-top:13px; background:var(--panel-2); border:1px solid var(--line); color:var(--text); border-radius:9px; padding:9px 16px; font:inherit; font-weight:700; font-size:12.5px; cursor:pointer; }
+
+  h2.sec{ font-size:16px; letter-spacing:.05em; text-transform:uppercase; }
+  p.sub{ font-size:12.5px; color:var(--muted); margin:3px 0 14px; }
+  .lb-tabs{ display:flex; gap:4px; margin-bottom:12px; flex-wrap:wrap; }
+  .lb-tab{ flex:1; min-width:52px; background:var(--panel-2); border:1px solid var(--line); color:var(--muted); border-radius:8px; padding:7px 4px; font-size:12px; font-weight:700; cursor:pointer; text-align:center; }
+  .lb-tab.active{ border-color:var(--accent); color:var(--text); }
+  table{ width:100%; border-collapse:collapse; font-size:13px; }
+  th,td{ padding:8px 6px; text-align:left; border-bottom:1px solid var(--line); }
+  th{ font-size:10px; text-transform:uppercase; letter-spacing:.06em; color:var(--faint); font-weight:700; }
+  td.num,th.num{ text-align:right; font-family:'JetBrains Mono',monospace; }
+  tr.me td{ color:var(--accent); font-weight:700; }
+  .rank-1 td:first-child::before{ content:"🥇 "; }
+  .rank-2 td:first-child::before{ content:"🥈 "; }
+  .rank-3 td:first-child::before{ content:"🥉 "; }
+  .lb-empty{ color:var(--muted); font-size:13px; text-align:center; padding:22px 0; }
+  .lb-note{ font-size:11px; color:var(--faint); margin-top:10px; line-height:1.5; }
+
+  #tryOthers h3{ font-size:12px; text-transform:uppercase; letter-spacing:.07em; color:var(--faint); margin:26px 0 11px; }
+  .try-done{ text-align:center; color:var(--muted); font-size:13px; padding:18px; background:var(--panel-2); border-radius:12px; line-height:1.6; }
+
+  #toast{
+    position:fixed; top:64px; left:50%; transform:translateX(-50%); background:var(--text); color:var(--bg);
+    padding:9px 16px; border-radius:8px; font-size:13px; font-weight:600; opacity:0; pointer-events:none; transition:.2s; z-index:50; max-width:90vw; text-align:center;
+  }
+  #toast.show{ opacity:1; }
+</style>
+</head>
+<body>
+
+<!-- ============ HOME ============ -->
+<section id="view-home" class="view">
+  <div class="home">
+    <h1><span class="sq"></span> Wordle Ourselves</h1>
+    <p class="tagline">A daily word game. One word per grid, one shot, and the clock is running. Come back tomorrow for four new words.</p>
+
+    <label class="fld" for="homeName">Your name</label>
+    <input type="text" id="homeName" maxlength="24" placeholder="e.g. Ishita" autocomplete="off" />
+
+    <label class="fld">Pick your grid</label>
+    <div class="levels" id="homeLevels"></div>
+
+    <details class="instructions" open>
+      <summary>How to play</summary>
+      <ul>
+        <li><span class="swatch" style="background:var(--correct)">A</span>right letter, right spot</li>
+        <li><span class="swatch" style="background:var(--present)">A</span>right letter, wrong spot</li>
+        <li><span class="swatch" style="background:var(--absent)">A</span>not in the word</li>
+        <li>You get as many guesses as the grid is wide — 5 for 5×5, 8 for 8×8.</li>
+        <li>Each grid has <b>one shared word per day</b>, the same for everyone.</li>
+        <li>The <b>clock starts</b> when the grid opens and pauses if you leave the tab.</li>
+        <li>Leaderboard ranks by <b>fewest guesses</b>, then <b>fastest time</b>.</li>
+      </ul>
+    </details>
+
+    <button class="btn" id="playBtn" disabled>PLAY</button>
+    <div class="home-allplayed" id="homeAllPlayed" hidden>
+      You've finished every grid today. <a href="#result/5">See the leaderboard →</a>
+    </div>
+  </div>
+</section>
+
+<!-- ============ GAME ============ -->
+<section id="view-game" class="view">
+  <div class="game-head">
+    <button id="quitBtn" title="Back to start">←</button>
+    <span class="lvl" id="gameLevelLabel">5×5</span>
+    <span class="timer" id="timer">0:00</span>
+  </div>
+  <div class="statusbar" id="gameMsg"></div>
+  <div class="board-wrap"><div class="board" id="board"></div></div>
+  <div class="kb" id="kb"></div>
+</section>
+
+<!-- ============ RESULT + LEADERBOARD ============ -->
+<section id="view-result" class="view">
+  <div class="brand"><span class="sq"></span> Wordle Ourselves</div>
+  <div id="resultBanner"></div>
+  <h2 class="sec">Today's leaderboard</h2>
+  <p class="sub" id="lbDate"></p>
+  <div class="lb-tabs" id="lbTabs"></div>
+  <div id="lbBody"></div>
+  <p class="lb-note" id="lbNote"></p>
+  <div id="tryOthers"></div>
+  <button class="btn secondary" id="homeBtn">Back to start</button>
+</section>
+
+<div id="toast"></div>
+
+<script type="module">
+/* ============================================================
+   Wordle Ourselves — daily word game
+   Flow:  #home  →  #play/<n>  →  #result/<n>
+   ============================================================ */
+
+// ---------- 1. Firebase config ----------
+// Project: brain-games-wordle.  These values are public by design (Firebase ships
+// them to every browser); the data is protected by firebase-rules.json, not by
+// hiding the key.  The leaderboard stays local-only until databaseURL is filled in
+// with the URL from Realtime Database → Data (looks like
+//   https://brain-games-wordle-default-rtdb.<region>.firebasedatabase.app ).
+const FIREBASE_CONFIG = {
+  apiKey: "AIzaSyCk--hHc6VFDoXAjAGkUGiYaPfXarY1j5E",
+  authDomain: "brain-games-wordle.firebaseapp.com",
+  databaseURL: "https://brain-games-wordle-default-rtdb.asia-southeast1.firebasedatabase.app",
+  projectId: "brain-games-wordle",
+  storageBucket: "brain-games-wordle.firebasestorage.app",
+  messagingSenderId: "746326923101",
+  appId: "1:746326923101:web:1c5656c8e52886ffae7ab4"
+};
+const FIREBASE_READY = !JSON.stringify(FIREBASE_CONFIG).includes("REPLACE_ME");
+
+// ---------- 2. Helpers ----------
+const LEVELS = [5, 6, 7, 8];
+const EPOCH = Date.UTC(2026, 0, 1);
+const $ = (s, r = document) => r.querySelector(s);
+const rot13 = s => s.replace(/[a-z]/g, c => String.fromCharCode((c.charCodeAt(0) - 97 + 13) % 26 + 97));
+
+function todayKey(d = new Date()) {
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+}
+function dayIndex(key) {
+  const [y, m, dd] = key.split("-").map(Number);
+  return Math.round((Date.UTC(y, m - 1, dd) - EPOCH) / 86400000);
+}
+function fmtTime(ms) {
+  const s = Math.floor(ms / 1000);
+  return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`;
+}
+function esc(s) { return String(s).replace(/[<>&]/g, c => ({ "<": "&lt;", ">": "&gt;", "&": "&amp;" }[c])); }
+function toast(msg, ms = 1400) {
+  const t = $("#toast"); t.textContent = msg; t.classList.add("show");
+  clearTimeout(toast._t); toast._t = setTimeout(() => t.classList.remove("show"), ms);
+}
+
+// ---------- 3. Local persistence ----------
+const LS = {
+  get name() { try { return localStorage.getItem("wo:name") || ""; } catch { return ""; } },
+  set name(v) { try { localStorage.setItem("wo:name", v); } catch {} },
+  get pid() {
+    let p;
+    try { p = localStorage.getItem("wo:pid"); } catch {}
+    if (!p) { p = "p_" + Math.random().toString(36).slice(2, 10) + Date.now().toString(36); try { localStorage.setItem("wo:pid", p); } catch {} }
+    return p;
+  },
+  gameKey(day, lvl) { return `wo:game:${day}:${lvl}`; },
+  loadGame(day, lvl) { try { return JSON.parse(localStorage.getItem(this.gameKey(day, lvl))); } catch { return null; } },
+  saveGame(day, lvl, g) { try { localStorage.setItem(this.gameKey(day, lvl), JSON.stringify(g)); } catch {} },
+  clearGame(day, lvl) { try { localStorage.removeItem(this.gameKey(day, lvl)); } catch {} }
+};
+const isDone = g => !!g && (g.status === "won" || g.status === "lost");
+
+// ---------- 4. Word lists (plain <script> files, work from file:// and https) ----------
+const wordCache = {};
+function loadScript(src) {
+  return new Promise((res, rej) => {
+    const s = document.createElement("script");
+    s.src = src; s.onload = res; s.onerror = () => rej(new Error("Failed to load " + src));
+    document.head.appendChild(s);
+  });
+}
+async function loadWords(lvl, day) {
+  if (wordCache[lvl]) return wordCache[lvl];
+  if (!window.WO_ANSWERS?.[lvl]) await loadScript(`words/answers-${lvl}.js`);
+  if (!window.WO_VALID?.[lvl]) await loadScript(`words/valid-${lvl}.js`);
+  const answers = rot13(window.WO_ANSWERS[lvl]).split("|");
+  const valid = new Set(window.WO_VALID[lvl].split("|"));
+  answers.forEach(w => valid.add(w));
+  const idx = ((dayIndex(day) % answers.length) + answers.length) % answers.length;
+  return (wordCache[lvl] = { answer: answers[idx], valid });
+}
+
+// ---------- 5. Guess scoring (handles duplicate letters) ----------
+function scoreGuess(guess, answer) {
+  const res = Array(guess.length).fill("absent");
+  const pool = {};
+  for (const c of answer) pool[c] = (pool[c] || 0) + 1;
+  for (let i = 0; i < guess.length; i++) if (guess[i] === answer[i]) { res[i] = "correct"; pool[guess[i]]--; }
+  for (let i = 0; i < guess.length; i++) {
+    if (res[i] === "correct") continue;
+    if (pool[guess[i]] > 0) { res[i] = "present"; pool[guess[i]]--; }
+  }
+  return res;
+}
+function emojiGrid(rows, answer) {
+  const map = { correct: "🟩", present: "🟨", absent: "⬛" };
+  return rows.map(g => scoreGuess(g, answer).map(m => map[m]).join("")).join("\n");
+}
+
+// ---------- 6. Firebase (lazy) + leaderboard I/O ----------
+let fb = null;
+async function getFb() {
+  if (!FIREBASE_READY) return null;
+  if (fb) return fb;
+  const [{ initializeApp }, dbMod] = await Promise.all([
+    import("https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js"),
+    import("https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js")
+  ]);
+  fb = { db: dbMod.getDatabase(initializeApp(FIREBASE_CONFIG)), ...dbMod };
+  return fb;
+}
+function readLocalBoard(day) { try { return JSON.parse(localStorage.getItem(`wo:lb:${day}`) || "{}"); } catch { return {}; } }
+async function submitScore(day, lvl, entry) {
+  const lk = `wo:lb:${day}`;
+  const local = readLocalBoard(day);
+  (local[lvl] = local[lvl] || {})[LS.pid] = entry;
+  try { localStorage.setItem(lk, JSON.stringify(local)); } catch {}
+  try {
+    const f = await getFb();
+    if (f) await f.set(f.ref(f.db, `leaderboard/${day}/${lvl}/${LS.pid}`), entry);
+  } catch (e) { console.warn("leaderboard write failed", e); }
+}
+let lbUnsub = null;
+function watchBoard(day, cb) {
+  if (lbUnsub) { lbUnsub(); lbUnsub = null; }
+  getFb().then(f => {
+    if (!f) { cb(readLocalBoard(day)); return; }
+    lbUnsub = f.onValue(f.ref(f.db, `leaderboard/${day}`), snap => {
+      const remote = snap.val() || {};
+      const local = readLocalBoard(day);
+      for (const lvl of LEVELS) remote[lvl] = Object.assign({}, local[lvl] || {}, remote[lvl] || {});
+      cb(remote);
+    }, () => cb(readLocalBoard(day)));
+  });
+}
+
+// ============================================================
+//  STATE
+// ============================================================
+const state = {
+  day: todayKey(),
+  lvl: null, answer: "", valid: null,
+  rows: [], current: "", status: "idle",
+  elapsedMs: 0, running: false, tick: null, lastTs: 0,
+  homePick: null, lastResult: null
+};
+
+// ============================================================
+//  ROUTER
+// ============================================================
+function go(hash) { if (location.hash === hash) route(); else location.hash = hash; }
+function showView(v) {
+  document.querySelectorAll(".view").forEach(s => s.classList.toggle("active", s.id === "view-" + v));
+  window.scrollTo(0, 0);
+}
+function route() {
+  const h = location.hash || "#home";
+  const m = h.match(/^#(play|result)\/([5-8])$/);
+  if (!LS.name && h !== "#home") { location.hash = "#home"; return; }
+  if (m && m[1] === "play") { showView("game"); enterGame(+m[2]); }
+  else if (m && m[1] === "result") { showView("result"); enterResult(+m[2]); }
+  else { leaveGame(); showView("home"); renderHome(); }
+}
+window.addEventListener("hashchange", route);
+
+// ============================================================
+//  HOME
+// ============================================================
+function renderHome() {
+  $("#homeName").value = LS.name;
+  if (state.homePick == null || isDone(LS.loadGame(state.day, state.homePick)))
+    state.homePick = LEVELS.find(n => !isDone(LS.loadGame(state.day, n))) ?? null;
+
+  const box = $("#homeLevels"); box.innerHTML = "";
+  for (const n of LEVELS) {
+    const g = LS.loadGame(state.day, n);
+    const done = isDone(g);
+    const resuming = g && !done && g.rows?.length;
+    const el = document.createElement("button");
+    el.type = "button";
+    el.className = "level" + (state.homePick === n && !done ? " active" : "") + (done ? " done" : "");
+    el.innerHTML = `<b>${n}×${n}</b><span>${done ? (g.status === "won" ? "solved" : "missed") : resuming ? "resume" : n + " letters"}</span>`;
+    if (done) {
+      const b = document.createElement("span");
+      b.className = "badge " + (g.status === "won" ? "win" : "loss");
+      b.textContent = g.status === "won" ? g.rows.length : "✕";
+      el.appendChild(b);
+    }
+    el.onclick = () => {
+      if (done) { go(`#result/${n}`); return; }
+      state.homePick = n; renderHome();
+    };
+    box.appendChild(el);
+  }
+
+  const allDone = LEVELS.every(n => isDone(LS.loadGame(state.day, n)));
+  $("#homeAllPlayed").hidden = !allDone;
+  updatePlayBtn();
+}
+function updatePlayBtn() {
+  const named = $("#homeName").value.trim().length > 0;
+  const g = state.homePick && LS.loadGame(state.day, state.homePick);
+  const pickable = state.homePick && !isDone(g);
+  $("#playBtn").disabled = !(named && pickable);
+  $("#playBtn").textContent = (g && !isDone(g) && g.rows?.length) ? "RESUME" : "PLAY";
+}
+$("#homeName").addEventListener("input", updatePlayBtn);
+$("#playBtn").addEventListener("click", () => {
+  const nm = $("#homeName").value.trim().slice(0, 24);
+  if (!nm || !state.homePick) return;
+  LS.name = nm;
+  go(`#play/${state.homePick}`);
+});
+
+// ============================================================
+//  GAME
+// ============================================================
+async function enterGame(n) {
+  const saved = LS.loadGame(state.day, n);
+  if (isDone(saved)) { location.hash = `#result/${n}`; return; }
+
+  state.lvl = n;
+  $("#gameLevelLabel").textContent = `${n}×${n}`;
+  $("#gameMsg").textContent = "Loading words…";
+  document.documentElement.style.setProperty("--n", n);
+  $("#board").style.setProperty("--n", n);
+
+  let words;
+  try { words = await loadWords(n, state.day); }
+  catch { $("#gameMsg").textContent = "Couldn't load the word list — check your connection and reload."; return; }
+
+  state.answer = words.answer;
+  state.valid = words.valid;
+  state.rows = saved?.rows || [];
+  state.elapsedMs = saved?.elapsedMs || 0;
+  state.current = "";
+  state.status = "playing";
+  state.running = false;
+
+  renderBoard();
+  updateGameMsg();
+  $("#timer").textContent = fmtTime(state.elapsedMs);
+  startTimer();                         // clock starts when the grid opens
+}
+function leaveGame() {
+  if (state.status === "playing" && state.lvl) {
+    stopTimer();
+    if (state.rows.length) persist();   // keep a resumable game…
+    else LS.clearGame(state.day, state.lvl); // …but drop an untouched one
+    state.status = "idle";
+  } else {
+    stopTimer();
+  }
+}
+$("#quitBtn").addEventListener("click", () => go("#home"));
+
+function updateGameMsg() {
+  const left = state.lvl - state.rows.length;
+  $("#gameMsg").textContent = state.rows.length === 0
+    ? "Type your first guess"
+    : `${left} ${left === 1 ? "guess" : "guesses"} left`;
+}
+
+function renderBoard() {
+  const board = $("#board");
+  board.style.setProperty("--n", state.lvl);
+  document.documentElement.style.setProperty("--n", state.lvl);
+  board.innerHTML = "";
+  const total = state.lvl;
+  for (let r = 0; r < total; r++) {
+    const row = document.createElement("div");
+    row.className = "row"; row.dataset.row = r;
+    const committed = r < state.rows.length;
+    const guess = committed ? state.rows[r] : (r === state.rows.length ? state.current : "");
+    const marks = committed ? scoreGuess(state.rows[r], state.answer) : null;
+    for (let c = 0; c < total; c++) {
+      const tile = document.createElement("div");
+      tile.className = "tile";
+      tile.textContent = guess[c] || "";
+      if (guess[c] && !committed) tile.classList.add("filled");
+      if (committed) { tile.classList.add("reveal", marks[c]); tile.style.animationDelay = (c * 0.25) + "s"; }
+      row.appendChild(tile);
+    }
+    board.appendChild(row);
+  }
+  renderKeyboard();
+}
+
+const KB_ROWS = ["qwertyuiop", "asdfghjkl", "zxcvbnm"];
+function keyStates() {
+  const st = {}, rank = { absent: 0, present: 1, correct: 2 };
+  for (const g of state.rows) {
+    const m = scoreGuess(g, state.answer);
+    for (let i = 0; i < g.length; i++) {
+      const c = g[i];
+      if (!(c in st) || rank[m[i]] > rank[st[c]]) st[c] = m[i];
+    }
+  }
+  return st;
+}
+function renderKeyboard() {
+  const kb = $("#kb"); kb.innerHTML = "";
+  const st = keyStates();
+  KB_ROWS.forEach((letters, i) => {
+    const row = document.createElement("div"); row.className = "kb-row";
+    if (i === 2) row.appendChild(mkKey("enter", "Enter", "wide"));
+    for (const ch of letters) row.appendChild(mkKey(ch, ch, st[ch] || ""));
+    if (i === 2) row.appendChild(mkKey("back", "⌫", "wide"));
+    kb.appendChild(row);
+  });
+}
+function mkKey(key, label, cls) {
+  const b = document.createElement("button");
+  b.className = "key " + cls; b.textContent = label;
+  b.onclick = () => handleKey(key);
+  return b;
+}
+
+// ---------- timer ----------
+function startTimer() {
+  if (state.running || state.status !== "playing") return;
+  state.running = true; state.lastTs = performance.now();
+  let n = 0;
+  state.tick = setInterval(() => {
+    const now = performance.now();
+    state.elapsedMs += now - state.lastTs; state.lastTs = now;
+    $("#timer").textContent = fmtTime(state.elapsedMs);
+    if (++n % 8 === 0) persist();          // checkpoint the clock ~every 2s
+  }, 250);
+  $("#timer").classList.remove("paused");
+}
+function stopTimer() {
+  if (!state.running) return;
+  state.elapsedMs += performance.now() - state.lastTs;
+  clearInterval(state.tick); state.running = false;
+  $("#timer").textContent = fmtTime(state.elapsedMs);
+}
+document.addEventListener("visibilitychange", () => {
+  if (!$("#view-game").classList.contains("active")) return;
+  if (document.hidden) { stopTimer(); $("#timer").classList.add("paused"); persist(); }
+  else if (state.status === "playing") startTimer();
+});
+
+// ---------- input ----------
+function handleKey(key) {
+  if (state.status !== "playing" || !$("#view-game").classList.contains("active")) return;
+  if (key === "enter") return submitGuess();
+  if (key === "back") { state.current = state.current.slice(0, -1); return renderBoard(); }
+  if (/^[a-z]$/.test(key) && state.current.length < state.lvl) {
+    state.current += key;
+    renderBoard();
+  }
+}
+window.addEventListener("keydown", e => {
+  if (!$("#view-game").classList.contains("active")) return;
+  if (e.key === "Enter") handleKey("enter");
+  else if (e.key === "Backspace") handleKey("back");
+  else if (/^[a-zA-Z]$/.test(e.key)) handleKey(e.key.toLowerCase());
+});
+
+function shakeRow() {
+  const row = $(`.row[data-row="${state.rows.length}"]`);
+  if (row) { row.classList.add("shake"); setTimeout(() => row.classList.remove("shake"), 400); }
+}
+function submitGuess() {
+  const g = state.current;
+  if (g.length !== state.lvl) { toast("Not enough letters"); return shakeRow(); }
+  if (!state.valid.has(g)) { toast("Not in word list"); return shakeRow(); }
+  state.rows.push(g); state.current = "";
+  renderBoard();
+
+  if (g === state.answer) state.status = "won";
+  else if (state.rows.length >= state.lvl) state.status = "lost";
+
+  if (state.status !== "playing") {
+    stopTimer(); persist();
+    const won = state.status === "won";
+    const attempts = won ? state.rows.length : state.lvl;
+    const timeMs = Math.round(state.elapsedMs);
+    state.lastResult = { lvl: state.lvl, won, attempts, timeMs, answer: state.answer, rows: state.rows.slice() };
+    submitScore(state.day, state.lvl, { name: LS.name || "Anon", attempts, timeMs, won, ts: Date.now() });
+    const lvl = state.lvl;
+    setTimeout(() => { location.hash = `#result/${lvl}`; }, 1150);  // let the last row flip
+  } else {
+    persist();
+    updateGameMsg();
+  }
+}
+function persist() {
+  if (!state.lvl || state.status === "idle") return;
+  LS.saveGame(state.day, state.lvl, { status: state.status, rows: state.rows, elapsedMs: state.elapsedMs });
+}
+
+// ============================================================
+//  RESULT + LEADERBOARD
+// ============================================================
+let lbTab = "overall";
+async function enterResult(n) {
+  stopTimer();
+  lbTab = String(n);
+  $("#lbDate").textContent = new Date().toLocaleDateString(undefined, { weekday: "long", month: "short", day: "numeric" });
+
+  await renderResultBanner(n);
+  renderLeaderboard(readLocalBoard(state.day));
+  watchBoard(state.day, renderLeaderboard);
+  renderTryOthers();
+}
+
+async function renderResultBanner(n) {
+  const box = $("#resultBanner");
+  const saved = LS.loadGame(state.day, n);
+  let r = state.lastResult && state.lastResult.lvl === n ? state.lastResult : null;
+
+  if (!r && isDone(saved)) {
+    let answer = "";
+    try { answer = (await loadWords(n, state.day)).answer; } catch {}
+    r = { lvl: n, won: saved.status === "won", attempts: saved.status === "won" ? saved.rows.length : n,
+          timeMs: saved.elapsedMs || 0, answer, rows: saved.rows || [] };
+  }
+  if (!r) { box.innerHTML = ""; return; }
+
+  const grid = r.answer && r.rows.length ? emojiGrid(r.rows, r.answer) : "";
+  box.innerHTML = `
+    <div class="banner ${r.won ? "win" : ""}">
+      <div class="t">${r.won ? "Solved it." : "Out of guesses."}</div>
+      <div class="w">${esc(r.answer || "")}</div>
+      <div class="m">${n}×${n} · ${r.won ? r.attempts + "/" + n : "X/" + n} · ${fmtTime(r.timeMs)}</div>
+      ${grid ? `<div class="grid">${grid}</div>` : ""}
+      <button class="share" type="button">Share result</button>
+    </div>`;
+  box.querySelector(".share").onclick = () => shareResult(r, n);
+  state.lastResult = null; // consume, so a later revisit shows the neutral version
+}
+async function shareResult(r, n) {
+  const txt = `Wordle Ourselves ${n}×${n} — ${state.day}\n`
+    + `${r.won ? r.attempts : "X"}/${n} in ${fmtTime(r.timeMs)}\n\n`
+    + (r.answer && r.rows.length ? emojiGrid(r.rows, r.answer) : "");
+  try {
+    if (navigator.share) await navigator.share({ text: txt });
+    else { await navigator.clipboard.writeText(txt); toast("Copied to clipboard"); }
+  } catch { /* cancelled */ }
+}
+
+function rankLevel(entries) {
+  return Object.entries(entries).map(([pid, e]) => ({ ...e, pid })).sort((a, b) => {
+    if (a.won !== b.won) return a.won ? -1 : 1;
+    if (a.attempts !== b.attempts) return a.attempts - b.attempts;
+    return a.timeMs - b.timeMs;
+  });
+}
+function rankOverall(board) {
+  const players = {};
+  for (const lvl of LEVELS) {
+    for (const [pid, e] of Object.entries(board[lvl] || {})) {
+      const p = players[pid] || (players[pid] = { name: e.name, pid, solved: 0, attempts: 0, timeMs: 0 });
+      p.name = e.name;
+      p.attempts += e.attempts;
+      p.timeMs += e.timeMs;
+      if (e.won) p.solved++;
+    }
+  }
+  return Object.values(players).sort((a, b) => b.solved - a.solved || a.attempts - b.attempts || a.timeMs - b.timeMs);
+}
+function renderLeaderboard(board) {
+  const me = LS.pid;
+  const tabs = $("#lbTabs"); tabs.innerHTML = "";
+  [["overall", "Overall"], ...LEVELS.map(n => [String(n), `${n}×${n}`])].forEach(([id, label]) => {
+    const t = document.createElement("button");
+    t.className = "lb-tab" + (lbTab === id ? " active" : "");
+    t.textContent = label;
+    t.onclick = () => { lbTab = id; renderLeaderboard(board); };
+    tabs.appendChild(t);
+  });
+
+  const body = $("#lbBody");
+  if (lbTab === "overall") {
+    const rows = rankOverall(board);
+    body.innerHTML = rows.length ? `<table><thead><tr>
+      <th>Player</th><th class="num">Solved</th><th class="num">Guesses</th><th class="num">Time</th></tr></thead><tbody>${
+      rows.map((p, i) => `<tr class="rank-${i + 1} ${p.pid === me ? "me" : ""}">
+        <td>${esc(p.name)}</td><td class="num">${p.solved}/4</td>
+        <td class="num">${p.attempts}</td><td class="num">${fmtTime(p.timeMs)}</td></tr>`).join("")
+      }</tbody></table>` : `<div class="lb-empty">No one has played yet today.</div>`;
+  } else {
+    const rows = rankLevel(board[lbTab] || {});
+    body.innerHTML = rows.length ? `<table><thead><tr>
+      <th>Player</th><th class="num">Guesses</th><th class="num">Time</th></tr></thead><tbody>${
+      rows.map((e, i) => `<tr class="rank-${i + 1} ${e.pid === me ? "me" : ""}">
+        <td>${esc(e.name)}</td>
+        <td class="num">${e.won ? e.attempts + "/" + lbTab : "✕"}</td>
+        <td class="num">${fmtTime(e.timeMs)}</td></tr>`).join("")
+      }</tbody></table>` : `<div class="lb-empty">No one has finished ${lbTab}×${lbTab} yet today.</div>`;
+  }
+  $("#lbNote").textContent = FIREBASE_READY
+    ? "Ranked by fewest guesses, then fastest time. Overall rewards finishing all four grids."
+    : "Leaderboard is local-only until Firebase is configured (see README).";
+}
+
+function renderTryOthers() {
+  const box = $("#tryOthers");
+  const remaining = LEVELS.filter(n => !isDone(LS.loadGame(state.day, n)));
+  if (!remaining.length) {
+    box.innerHTML = `<div class="try-done">You've played all four grids today. 🎉<br>Fresh words tomorrow.</div>`;
+    return;
+  }
+  box.innerHTML = `<h3>Try other levels</h3><div class="levels">${
+    remaining.map(n => {
+      const g = LS.loadGame(state.day, n);
+      return `<button type="button" class="level" data-lvl="${n}"><b>${n}×${n}</b><span>${g?.rows?.length ? "resume" : "play"}</span></button>`;
+    }).join("")
+  }</div>`;
+  box.querySelectorAll("[data-lvl]").forEach(b => b.onclick = () => go(`#play/${b.dataset.lvl}`));
+}
+$("#homeBtn").addEventListener("click", () => go("#home"));
+
+// ============================================================
+//  BOOT
+// ============================================================
+LS.pid;            // ensure a player id exists
+route();
+</script>
+</body>
+</html>

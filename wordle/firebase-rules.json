@@ -1,0 +1,27 @@
+{
+  "rules": {
+    ".read": false,
+    ".write": false,
+
+    "leaderboard": {
+      "$day": {
+        ".read": true,
+
+        "$level": {
+          "$player": {
+            ".write": "!data.exists()",
+            ".validate": "newData.hasChildren(['name','attempts','timeMs','won','ts']) && $level.matches(/^[5-8]$/) && $player.length <= 40",
+
+            "name":     { ".validate": "newData.isString() && newData.val().length >= 1 && newData.val().length <= 24" },
+            "attempts": { ".validate": "newData.isNumber() && newData.val() >= 1 && newData.val() <= 8" },
+            "timeMs":   { ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() <= 86400000" },
+            "won":      { ".validate": "newData.isBoolean()" },
+            "ts":       { ".validate": "newData.isNumber()" },
+
+            "$other":   { ".validate": false }
+          }
+        }
+      }
+    }
+  }
+}
