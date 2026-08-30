@@ -1,4 +1,4 @@
-# Wordle Ourselves
+# Word Master Wordle
 
 A small daily word game. Four grids — **5×5, 6×6, 7×7, 8×8** (an *N*-letter word in *N*
 guesses) — one shared word per grid per day, a clock that runs while you play, and a

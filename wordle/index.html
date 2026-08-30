@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-<title>Wordle Ourselves</title>
+<title>Word Master Wordle</title>
 <meta name="description" content="A daily word game — enter your name, pick a grid (5×5 to 8×8), beat the clock, and top today's leaderboard." />
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -163,7 +163,7 @@
 <!-- ============ HOME ============ -->
 <section id="view-home" class="view">
   <div class="home">
-    <h1><span class="sq"></span> Wordle Ourselves</h1>
+    <h1><span class="sq"></span> Word Master Wordle</h1>
     <p class="tagline">A daily word game. One word per grid, one shot, and the clock is running. Come back tomorrow for four new words.</p>
 
     <label class="fld" for="homeName">Your name</label>
@@ -206,7 +206,7 @@
 
 <!-- ============ RESULT + LEADERBOARD ============ -->
 <section id="view-result" class="view">
-  <div class="brand"><span class="sq"></span> Wordle Ourselves</div>
+  <div class="brand"><span class="sq"></span> Word Master Wordle</div>
   <div id="resultBanner"></div>
   <h2 class="sec">Today's leaderboard</h2>
   <p class="sub" id="lbDate"></p>
@@ -221,7 +221,7 @@
 
 <script type="module">
 /* ============================================================
-   Wordle Ourselves — daily word game
+   Word Master Wordle — daily word game
    Flow:  #home  →  #play/<n>  →  #result/<n>
    ============================================================ */
 
@@ -654,7 +654,7 @@ async function renderResultBanner(n) {
   state.lastResult = null; // consume, so a later revisit shows the neutral version
 }
 async function shareResult(r, n) {
-  const txt = `Wordle Ourselves ${n}×${n} — ${state.day}\n`
+  const txt = `Word Master Wordle ${n}×${n} — ${state.day}\n`
     + `${r.won ? r.attempts : "X"}/${n} in ${fmtTime(r.timeMs)}\n\n`
     + (r.answer && r.rows.length ? emojiGrid(r.rows, r.answer) : "");
   try {
