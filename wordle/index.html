@@ -105,13 +105,24 @@
   }
   .tile.filled{ border-color:var(--faint); }
   .tile.pop{ animation:pop .1s; }
-  .tile.reveal{ animation:flip .5s ease forwards; }
   .tile.correct{ background:var(--correct); border-color:var(--correct); color:#fff; }
   .tile.present{ background:var(--present); border-color:var(--present); color:#fff; }
   .tile.absent{ background:var(--absent); border-color:var(--absent); color:#fff; }
+  /* reveal: tile stays blank through the first half of the flip, then the
+     colour appears as it turns back — so colour reveals ON each flip.
+     `both` fill keeps it blank during its stagger delay. */
+  .tile.reveal{ animation:flip-reveal .55s ease both; --reveal-bg:var(--absent); }
+  .tile.reveal.correct{ --reveal-bg:var(--correct); }
+  .tile.reveal.present{ --reveal-bg:var(--present); }
+  .tile.reveal.absent{ --reveal-bg:var(--absent); }
   .row.shake{ animation:shake .4s; }
   @keyframes pop{0%{transform:scale(.9)}100%{transform:scale(1)}}
-  @keyframes flip{0%{transform:rotateX(0)}45%{transform:rotateX(90deg)}100%{transform:rotateX(0)}}
+  @keyframes flip-reveal{
+    0%{ transform:rotateX(0); background-color:transparent; border-color:var(--faint); color:var(--text); }
+    49.9%{ transform:rotateX(-88deg); background-color:transparent; border-color:var(--faint); color:var(--text); }
+    50%{ transform:rotateX(-90deg); background-color:var(--reveal-bg); border-color:var(--reveal-bg); color:#fff; }
+    100%{ transform:rotateX(0); background-color:var(--reveal-bg); border-color:var(--reveal-bg); color:#fff; }
+  }
   @keyframes shake{10%,90%{transform:translateX(-2px)}30%,70%{transform:translateX(-5px)}50%{transform:translateX(5px)}}
 
   .kb{ display:flex; flex-direction:column; gap:6px; margin-top:auto; padding-top:8px; }
@@ -397,7 +408,7 @@ window.addEventListener("hashchange", route);
 //  HOME
 // ============================================================
 function renderHome() {
-  $("#homeName").value = LS.name;
+  if ($("#homeName").value !== LS.name) $("#homeName").value = LS.name;  // don't clobber a name being typed
   if (state.homePick == null || isDone(LS.loadGame(state.day, state.homePick)))
     state.homePick = LEVELS.find(n => !isDone(LS.loadGame(state.day, n))) ?? null;
 
@@ -434,7 +445,10 @@ function updatePlayBtn() {
   $("#playBtn").disabled = !(named && pickable);
   $("#playBtn").textContent = (g && !isDone(g) && g.rows?.length) ? "RESUME" : "PLAY";
 }
-$("#homeName").addEventListener("input", updatePlayBtn);
+$("#homeName").addEventListener("input", () => {
+  LS.name = $("#homeName").value.slice(0, 24);   // persist as they type, so switching grids can't lose it
+  updatePlayBtn();
+});
 $("#playBtn").addEventListener("click", () => {
   const nm = $("#homeName").value.trim().slice(0, 24);
   if (!nm || !state.homePick) return;
@@ -461,7 +475,7 @@ async function enterGame(n) {
 
   state.answer = words.answer;
   state.valid = words.valid;
-  state.rows = saved?.rows || [];
+  state.rows = (saved?.rows || []).filter(w => typeof w === "string" && w.length === n).slice(0, n);
   state.elapsedMs = saved?.elapsedMs || 0;
   state.current = "";
   state.status = "playing";
@@ -512,7 +526,7 @@ function renderBoard() {
         tile.classList.add("filled");
         if (isCurrent && c === state.animateCell) tile.classList.add("pop");
       }
-      if (committed) {
+      if (committed && marks[c]) {
         tile.classList.add(marks[c]);
         if (r === state.animateRow) {           // only the just-submitted row flips
           tile.classList.add("reveal");
@@ -623,7 +637,7 @@ function submitGuess() {
     state.lastResult = { lvl: state.lvl, won, attempts, timeMs, answer: state.answer, rows: state.rows.slice() };
     submitScore(state.day, state.lvl, { name: LS.name || "Anon", attempts, timeMs, won, ts: Date.now() });
     const lvl = state.lvl;
-    setTimeout(() => { location.hash = `#result/${lvl}`; }, 1150);  // let the last row flip
+    setTimeout(() => { location.hash = `#result/${lvl}`; }, (lvl - 1) * 250 + 950);  // let the whole row finish revealing
   } else {
     persist();
     updateGameMsg();
