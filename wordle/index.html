@@ -463,23 +463,31 @@ async function enterGame(n) {
   const saved = LS.loadGame(state.day, n);
   if (isDone(saved)) { location.hash = `#result/${n}`; return; }
 
+  // paint an empty grid of the right size *now* so the previous grid's board
+  // never flashes while this grid's word list is fetched
+  stopTimer();
   state.lvl = n;
+  state.answer = "";
+  state.valid = null;
+  state.rows = [];
+  state.current = "";
+  state.status = "playing";
+  state.running = false;
+  state.animateRow = state.animateCell = null;
   $("#gameLevelLabel").textContent = `${n}×${n}`;
-  $("#gameMsg").textContent = "Loading words…";
-  document.documentElement.style.setProperty("--n", n);
-  $("#board").style.setProperty("--n", n);
+  $("#gameMsg").textContent = "Loading…";
+  $("#timer").textContent = "0:00";
+  renderBoard();
 
   let words;
   try { words = await loadWords(n, state.day); }
-  catch { $("#gameMsg").textContent = "Couldn't load the word list — check your connection and reload."; return; }
+  catch { if (state.lvl === n) $("#gameMsg").textContent = "Couldn't load the word list — check your connection and reload."; return; }
+  if (state.lvl !== n) return;          // a newer navigation superseded this one
 
   state.answer = words.answer;
   state.valid = words.valid;
   state.rows = (saved?.rows || []).filter(w => typeof w === "string" && w.length === n).slice(0, n);
   state.elapsedMs = saved?.elapsedMs || 0;
-  state.current = "";
-  state.status = "playing";
-  state.running = false;
 
   renderBoard();
   updateGameMsg();
@@ -656,11 +664,12 @@ async function enterResult(n) {
   stopTimer();
   lbTab = String(n);
   $("#lbDate").textContent = new Date().toLocaleDateString(undefined, { weekday: "long", month: "short", day: "numeric" });
+  $("#resultBanner").innerHTML = "";            // drop the previous grid's banner while this one loads
+  renderLeaderboard(readLocalBoard(state.day)); // paint the local board immediately
+  renderTryOthers();
 
   await renderResultBanner(n);
-  renderLeaderboard(readLocalBoard(state.day));
   watchBoard(state.day, renderLeaderboard);
-  renderTryOthers();
 }
 
 async function renderResultBanner(n) {
