@@ -36,6 +36,9 @@ python3 -m http.server 8777      # then open http://localhost:8777
 
 It's already in the portfolio repo, so GitHub Pages serves it at
 `https://<user>.github.io/wordle/` once Pages is enabled for the repo. Nothing to build.
+Live at **https://sparshgoyal.work/wordle/** — the portfolio repo has a custom domain
+(`CNAME`), and GitHub now 301s the `github.io` URL there. Keep absolute URLs (`og:*`
+meta, etc.) pointed at the custom domain.
 
 ---
 
