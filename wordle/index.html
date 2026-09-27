@@ -11,6 +11,12 @@
 <link rel="apple-touch-icon" href="apple-touch-icon.png" />
 <meta name="theme-color" content="#0f1115" />
 
+<link rel="manifest" href="manifest.webmanifest" />
+<meta name="mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+<meta name="apple-mobile-web-app-title" content="Wordle" />
+
 <meta property="og:type" content="website" />
 <meta property="og:site_name" content="Word Master Wordle" />
 <meta property="og:title" content="Word Master Wordle" />
@@ -829,6 +835,12 @@ $("#homeBtn").addEventListener("click", () => go("#home"));
 // ============================================================
 LS.pid;            // ensure a player id exists
 route();
+
+// installable: register the service worker (adds the offline shell + the
+// browser's install prompt; safe to skip on browsers without support)
+if ("serviceWorker" in navigator) {
+  window.addEventListener("load", () => navigator.serviceWorker.register("sw.js").catch(() => {}));
+}
 </script>
 </body>
 </html>

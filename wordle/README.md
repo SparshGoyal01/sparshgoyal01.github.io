@@ -39,6 +39,30 @@ It's already in the portfolio repo, so GitHub Pages serves it at
 
 ---
 
+## Installable (PWA)
+
+`manifest.webmanifest` + `sw.js` make this installable — "Add to Home Screen" / the
+browser's install icon gives it its own icon, no address bar, and it opens straight to
+the home screen. Needs no build step, same as everything else here.
+
+- `manifest.webmanifest` — name, theme colour, and the three icons below.
+- `icon-192.png` / `icon-512.png` / `icon-maskable-512.png` — regenerate with
+  `tools/build-words.sh`'s sibling approach: draw them on a `<canvas>` in a browser and
+  save the `toDataURL()` output (this machine has no image tooling). They share the
+  green-tile-with-a-"W" mark from `favicon.svg` / `apple-touch-icon.png` — keep all four
+  in sync if the mark ever changes.
+- `sw.js` — network-first for `index.html` (so a fresh deploy shows up immediately
+  instead of a stale cached shell), stale-while-revalidate for everything else (word
+  lists, icons, fonts), and it never touches `*.firebasedatabase.app` traffic — the
+  leaderboard's live reads/writes bypass the cache entirely. **Bump the `CACHE` version
+  string in `sw.js`** if you ever need to force already-installed copies to drop old
+  cached files (not usually necessary — the shell itself is network-first).
+- The service worker registered fine on GitHub Pages but failed against this repo's
+  improvised local test server (same thing happened building Kharcha) — test installability
+  against the real deployed URL, not a local static server.
+
+---
+
 ## Leaderboard (Firebase)
 
 **Configured and live** — project `brain-games-wordle`, Realtime Database in
