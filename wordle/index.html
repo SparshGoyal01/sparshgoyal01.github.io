@@ -117,16 +117,36 @@
   .home-allplayed{ text-align:center; font-size:12.5px; color:var(--muted); margin-top:12px; }
   .home-allplayed a{ color:var(--accent); }
 
+  .practice-entry{ display:flex; justify-content:flex-end; margin-top:18px; }
+  .practice-cta{
+    background:var(--panel-2); border:1px solid var(--line); color:var(--text);
+    font:inherit; font-weight:700; font-size:12.5px; letter-spacing:.03em;
+    padding:9px 16px; border-radius:999px; cursor:pointer;
+  }
+  .practice-cta:hover{ border-color:var(--faint); }
+
   /* ---------- GAME ---------- */
-  .game-head{ display:flex; align-items:center; gap:12px; padding:16px 2px 12px; }
+  .game-head{ display:flex; align-items:center; gap:10px; padding:16px 2px 12px; }
   #quitBtn{
     background:var(--panel); border:1px solid var(--line); color:var(--text); width:34px; height:34px;
     border-radius:9px; cursor:pointer; font-size:16px; display:grid; place-items:center;
   }
   .game-head .lvl{ font-weight:800; letter-spacing:.08em; font-size:15px; }
+  .practice-pill{
+    font-size:10.5px; font-weight:800; letter-spacing:.05em; text-transform:uppercase;
+    color:#0b1220; background:var(--accent); padding:4px 9px; border-radius:999px;
+  }
   .timer{ margin-left:auto; font-family:'JetBrains Mono',monospace; font-weight:700; font-size:18px; }
   .timer.paused{ color:var(--faint); }
   .statusbar{ font-size:13px; color:var(--muted); min-height:18px; margin-bottom:10px; }
+
+  .practice-actions{
+    position:sticky; bottom:0; display:flex; gap:10px; margin-top:14px;
+    padding:14px 0 calc(14px + env(safe-area-inset-bottom, 0px));
+    background:linear-gradient(to top, var(--bg) 62%, transparent);
+  }
+  .practice-actions[hidden]{ display:none; }
+  .practice-actions .btn{ flex:1; margin-top:0; }
 
   .board-wrap{ display:flex; justify-content:center; margin-bottom:14px; }
   .board{ display:grid; gap:5px; }
@@ -200,6 +220,24 @@
   #tryOthers h3{ font-size:12px; text-transform:uppercase; letter-spacing:.07em; color:var(--faint); margin:26px 0 11px; }
   .try-done{ text-align:center; color:var(--muted); font-size:13px; padding:18px; background:var(--panel-2); border-radius:12px; line-height:1.6; }
 
+  /* ---------- Practice mode sheet ---------- */
+  .sheet-backdrop{
+    position:fixed; inset:0; background:rgba(8,9,12,.6);
+    display:flex; align-items:flex-end; justify-content:center; z-index:200;
+  }
+  .sheet-backdrop[hidden]{ display:none; }
+  .sheet{
+    width:100%; max-width:560px; background:var(--panel); border:1px solid var(--line); border-bottom:none;
+    border-radius:20px 20px 0 0; padding:14px 22px calc(22px + env(safe-area-inset-bottom, 0px));
+    animation:sheet-up .2s ease;
+  }
+  @keyframes sheet-up{ from{ transform:translateY(30px); opacity:.5; } to{ transform:translateY(0); opacity:1; } }
+  .sheet-handle{ width:36px; height:4px; border-radius:999px; background:var(--line); margin:0 auto 16px; }
+  .sheet-title{ font-size:15px; font-weight:800; letter-spacing:.08em; text-transform:uppercase; margin-bottom:6px; }
+  .sheet-sub{ font-size:13px; color:var(--muted); line-height:1.5; margin-bottom:18px; }
+  .sheet .levels{ margin-bottom:18px; }
+  .sheet .btn{ margin-top:0; }
+
   #toast{
     position:fixed; top:64px; left:50%; transform:translateX(-50%); background:var(--text); color:var(--bg);
     padding:9px 16px; border-radius:8px; font-size:13px; font-weight:600; opacity:0; pointer-events:none; transition:.2s; z-index:50; max-width:90vw; text-align:center;
@@ -233,6 +271,10 @@
         <li>Leaderboard ranks by <b>fewest guesses</b>, then <b>fastest time</b>.</li>
       </ul>
     </details>
+
+    <div class="practice-entry">
+      <button type="button" class="practice-cta" id="practiceModeBtn">Practice Mode</button>
+    </div>
   </div>
 
   <div class="home-cta">
@@ -249,11 +291,16 @@
   <div class="game-head">
     <button id="quitBtn" title="Back to start">←</button>
     <span class="lvl" id="gameLevelLabel">5×5</span>
+    <span class="practice-pill" id="practicePill" hidden>Practice Mode</span>
     <span class="timer" id="timer">0:00</span>
   </div>
   <div class="statusbar" id="gameMsg"></div>
   <div class="board-wrap"><div class="board" id="board"></div></div>
   <div class="kb" id="kb"></div>
+  <div class="practice-actions" id="practiceActions" hidden>
+    <button type="button" class="btn" id="practiceAgainBtn">Practice again</button>
+    <button type="button" class="btn secondary" id="practiceHomeBtn">Back to home</button>
+  </div>
 </section>
 
 <!-- ============ RESULT + LEADERBOARD ============ -->
@@ -270,6 +317,16 @@
 </section>
 
 <div id="toast"></div>
+
+<div class="sheet-backdrop" id="practiceBackdrop" hidden>
+  <div class="sheet">
+    <div class="sheet-handle"></div>
+    <h3 class="sheet-title">Practice Mode</h3>
+    <p class="sheet-sub">Any grid, as many times as you like — practice rounds never touch the leaderboard.</p>
+    <div class="levels" id="practiceLevels"></div>
+    <button type="button" class="btn" id="practiceGoBtn">Practice</button>
+  </div>
+</div>
 
 <script type="module">
 /* ============================================================
@@ -351,7 +408,7 @@ async function loadWords(lvl, day) {
   const valid = new Set(window.WO_VALID[lvl].split("|"));
   answers.forEach(w => valid.add(w));
   const idx = ((dayIndex(day) % answers.length) + answers.length) % answers.length;
-  return (wordCache[lvl] = { answer: answers[idx], valid });
+  return (wordCache[lvl] = { answer: answers[idx], valid, answers });
 }
 
 // ---------- 5. Guess scoring (handles duplicate letters) ----------
@@ -417,7 +474,8 @@ const state = {
   rows: [], current: "", status: "idle",
   elapsedMs: 0, running: false, tick: null, lastTs: 0,
   homePick: null, lastResult: null,
-  animateRow: null, animateCell: null   // one-shot: which row flips / which tile pops on the next render
+  animateRow: null, animateCell: null,  // one-shot: which row flips / which tile pops on the next render
+  isPractice: false
 };
 
 // ============================================================
@@ -431,9 +489,11 @@ function showView(v) {
 function route() {
   const h = location.hash || "#home";
   const m = h.match(/^#(play|result)\/([5-8])$/);
-  if (!LS.name && h !== "#home" && h !== "#leaderboard") { location.hash = "#home"; return; }
+  const mp = h.match(/^#practice\/([5-8])$/);
+  if (!LS.name && h !== "#home" && h !== "#leaderboard" && !mp) { location.hash = "#home"; return; }
   if (m && m[1] === "play") { showView("game"); enterGame(+m[2]); }
   else if (m && m[1] === "result") { showView("result"); enterResult(+m[2]); }
+  else if (mp) { showView("game"); enterPractice(+mp[1]); }
   else if (h === "#leaderboard") { leaveGame(); showView("result"); enterResult(null); }
   else {
     leaveGame(); showView("home"); renderHome();
@@ -506,6 +566,37 @@ $("#homeName").addEventListener("input", () => {
 $("#homeName").addEventListener("keydown", e => { if (e.key === "Enter") { e.preventDefault(); tryPlay(); } });
 $("#playBtn").addEventListener("click", tryPlay);
 
+// ---------- Practice mode entry (home CTA + bottom sheet) ----------
+let practicePick = 5;
+function renderPracticeLevels() {
+  const box = $("#practiceLevels"); box.innerHTML = "";
+  for (const n of LEVELS) {
+    const el = document.createElement("button");
+    el.type = "button";
+    el.className = "level" + (practicePick === n ? " active" : "");
+    el.innerHTML = `<b>${n}×${n}</b><span>${n} letters</span>`;
+    el.onclick = () => { practicePick = n; renderPracticeLevels(); };
+    box.appendChild(el);
+  }
+}
+function openPracticeSheet() {
+  practicePick = 5;
+  renderPracticeLevels();
+  $("#practiceBackdrop").hidden = false;
+  document.body.style.overflow = "hidden";
+}
+function closePracticeSheet() {
+  $("#practiceBackdrop").hidden = true;
+  document.body.style.overflow = "";
+}
+$("#practiceModeBtn").addEventListener("click", openPracticeSheet);
+$("#practiceBackdrop").addEventListener("click", e => { if (e.target === $("#practiceBackdrop")) closePracticeSheet(); });
+$("#practiceGoBtn").addEventListener("click", () => {
+  const n = practicePick;
+  closePracticeSheet();
+  go(`#practice/${n}`);
+});
+
 // ============================================================
 //  GAME
 // ============================================================
@@ -524,6 +615,9 @@ async function enterGame(n) {
   state.status = "playing";
   state.running = false;
   state.animateRow = state.animateCell = null;
+  state.isPractice = false;
+  $("#practicePill").hidden = true;
+  $("#practiceActions").hidden = true;
   $("#gameLevelLabel").textContent = `${n}×${n}`;
   $("#gameMsg").textContent = "Loading…";
   $("#timer").textContent = "0:00";
@@ -544,7 +638,58 @@ async function enterGame(n) {
   $("#timer").textContent = fmtTime(state.elapsedMs);
   startTimer();                         // clock starts when the grid opens
 }
+
+// practice: same engine as enterGame, but never touches the daily save slot,
+// never locks the grid, and always deals a fresh random word (never today's
+// real answer, so it can't spoil the leaderboard puzzle)
+function pickPracticeWord(list, avoid) {
+  if (!list.length) return avoid;
+  if (list.length === 1) return list[0];
+  let w;
+  do { w = list[Math.floor(Math.random() * list.length)]; } while (w === avoid);
+  return w;
+}
+async function enterPractice(n) {
+  stopTimer();
+  state.lvl = n;
+  state.answer = "";
+  state.valid = null;
+  state.rows = [];
+  state.current = "";
+  state.status = "playing";
+  state.running = false;
+  state.animateRow = state.animateCell = null;
+  state.isPractice = true;
+  $("#gameLevelLabel").textContent = `${n}×${n}`;
+  $("#practicePill").hidden = false;
+  $("#practiceActions").hidden = true;
+  $("#gameMsg").textContent = "Loading…";
+  $("#timer").textContent = "0:00";
+  renderBoard();
+
+  let words;
+  try { words = await loadWords(n, state.day); }
+  catch { if (state.lvl === n && state.isPractice) $("#gameMsg").textContent = "Couldn't load the word list — check your connection and reload."; return; }
+  if (state.lvl !== n || !state.isPractice) return;   // a newer navigation superseded this one
+
+  state.answer = pickPracticeWord(words.answers, words.answer);
+  state.valid = words.valid;
+  state.elapsedMs = 0;
+
+  renderBoard();
+  updateGameMsg();
+  $("#timer").textContent = fmtTime(state.elapsedMs);
+  startTimer();
+}
+
 function leaveGame() {
+  if (state.isPractice) {                 // practice is never saved — just drop it
+    stopTimer();
+    state.isPractice = false;
+    $("#practicePill").hidden = true;
+    $("#practiceActions").hidden = true;
+    return;
+  }
   if (state.status === "playing" && state.lvl) {
     stopTimer();
     if (state.rows.length) persist();   // keep a resumable game…
@@ -555,6 +700,8 @@ function leaveGame() {
   }
 }
 $("#quitBtn").addEventListener("click", () => go("#home"));
+$("#practiceAgainBtn").addEventListener("click", () => go(`#practice/${state.lvl}`));
+$("#practiceHomeBtn").addEventListener("click", () => go("#home"));
 
 function updateGameMsg() {
   const left = state.lvl - state.rows.length;
@@ -688,21 +835,32 @@ function submitGuess() {
   else if (state.rows.length >= state.lvl) state.status = "lost";
 
   if (state.status !== "playing") {
-    stopTimer(); persist();
+    stopTimer();
     const won = state.status === "won";
-    const attempts = won ? state.rows.length : state.lvl;
-    const timeMs = Math.round(state.elapsedMs);
-    state.lastResult = { lvl: state.lvl, won, attempts, timeMs, answer: state.answer, rows: state.rows.slice() };
-    submitScore(state.day, state.lvl, { name: LS.name || "Anon", attempts, timeMs, won, ts: Date.now() });
     const lvl = state.lvl;
-    setTimeout(() => { location.hash = `#result/${lvl}`; }, (lvl - 1) * 250 + 950);  // let the whole row finish revealing
+    if (state.isPractice) {
+      setTimeout(() => finishPractice(won), (lvl - 1) * 250 + 950);  // let the whole row finish revealing
+    } else {
+      persist();
+      const attempts = won ? state.rows.length : state.lvl;
+      const timeMs = Math.round(state.elapsedMs);
+      state.lastResult = { lvl, won, attempts, timeMs, answer: state.answer, rows: state.rows.slice() };
+      submitScore(state.day, lvl, { name: LS.name || "Anon", attempts, timeMs, won, ts: Date.now() });
+      setTimeout(() => { location.hash = `#result/${lvl}`; }, (lvl - 1) * 250 + 950);
+    }
   } else {
-    persist();
+    if (!state.isPractice) persist();
     updateGameMsg();
   }
 }
+function finishPractice(won) {
+  $("#gameMsg").textContent = won
+    ? `Solved in ${state.rows.length} · ${fmtTime(state.elapsedMs)}`
+    : `Out of guesses — it was ${state.answer.toUpperCase()}`;
+  $("#practiceActions").hidden = false;
+}
 function persist() {
-  if (!state.lvl || state.status === "idle") return;
+  if (!state.lvl || state.status === "idle" || state.isPractice) return;
   LS.saveGame(state.day, state.lvl, { status: state.status, rows: state.rows, elapsedMs: state.elapsedMs });
 }
 
