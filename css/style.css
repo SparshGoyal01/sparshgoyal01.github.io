@@ -335,6 +335,30 @@ section{padding:96px 0;}
 .beyond-item{font-size:14.5px;color:var(--slate-700);display:flex;align-items:center;gap:8px;}
 .beyond-item .dot{width:6px;height:6px;border-radius:50%;background:var(--gold);}
 
+/* ---------- Personal Projects ---------- */
+.pp-grid{display:flex;flex-wrap:wrap;gap:24px;}
+.pp-card{
+  background:var(--white);
+  border:1px solid var(--slate-200);
+  border-radius:var(--radius);
+  padding:28px;
+  flex:1 1 320px;
+  max-width:400px;
+  display:flex;flex-direction:column;
+  transition:transform .18s ease, box-shadow .18s ease, border-color .18s ease;
+}
+.pp-card:hover{transform:translateY(-4px);box-shadow:var(--shadow-lg);border-color:transparent;}
+.pp-card-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;}
+.pp-tag{
+  font-size:12.5px;font-weight:700;letter-spacing:0.05em;text-transform:uppercase;
+  color:var(--accent);
+}
+.pp-live{display:inline-flex;align-items:center;gap:6px;font-size:12.5px;font-weight:600;color:var(--slate-500);}
+.pp-live .dot{width:7px;height:7px;border-radius:50%;background:#1fbf75;box-shadow:0 0 0 3px rgba(31,191,117,0.18);}
+.pp-card h3{font-size:19px;margin-bottom:10px;}
+.pp-card p{font-size:14.5px;color:var(--slate-500);margin-bottom:18px;flex-grow:1;}
+.pp-stack{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:18px;}
+
 /* ---------- Contact / footer ---------- */
 .contact{
   background:var(--navy-950);
