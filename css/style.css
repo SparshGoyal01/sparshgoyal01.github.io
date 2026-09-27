@@ -64,7 +64,7 @@ h1,h2,h3,h4{
 }
 
 .section-head{
-  max-width:640px;
+  max-width:820px;
   margin-bottom:48px;
 }
 .section-head h2{font-size:clamp(28px,3.5vw,36px);}
