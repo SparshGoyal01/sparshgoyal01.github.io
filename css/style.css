@@ -70,8 +70,8 @@ h1,h2,h3,h4{
 .section-head h2{font-size:clamp(28px,3.5vw,36px);}
 .section-head p{color:var(--slate-500);font-size:17px;margin-top:10px;}
 
-section{padding:96px 0;}
-@media (max-width:768px){section{padding:64px 0;}}
+section{padding:68px 0;}
+@media (max-width:768px){section{padding:48px 0;}}
 
 /* ---------- Buttons ---------- */
 .btn{
@@ -137,7 +137,7 @@ section{padding:96px 0;}
 
 /* ---------- Hero ---------- */
 .hero{
-  padding:56px 0 96px;
+  padding:56px 0 68px;
   background:
     radial-gradient(circle at 85% 0%, var(--accent-light) 0%, transparent 45%),
     var(--paper);
