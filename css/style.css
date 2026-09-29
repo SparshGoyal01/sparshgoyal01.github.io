@@ -203,7 +203,7 @@ section{padding:68px 0;}
   align-items:start;
 }
 .about-text p{color:var(--slate-700);font-size:16.5px;margin-bottom:18px;}
-.about-highlights{display:flex;flex-direction:column;gap:0;margin-top:10px;}
+.about-highlights{display:flex;flex-direction:column;gap:0;margin-top:36px;}
 .highlight-item{
   display:flex;gap:16px;
   padding:20px 0;
