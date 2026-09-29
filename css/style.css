@@ -189,7 +189,7 @@ section{padding:68px 0;}
 
 @media (max-width:900px){
   .hero-inner{grid-template-columns:1fr;}
-  .hero-card{order:-1;max-width:420px;}
+  .hero-card{max-width:420px;}
 }
 @media (max-width:480px){
   .hero-card{padding:28px 24px;}
@@ -201,6 +201,10 @@ section{padding:68px 0;}
   grid-template-columns:1fr 1fr;
   gap:64px;
   align-items:start;
+}
+@media (max-width:900px){
+  .about-grid{grid-template-columns:1fr;gap:40px;}
+  .about-highlights{margin-top:0;}
 }
 .about-text p{color:var(--slate-700);font-size:16.5px;margin-bottom:18px;}
 .about-highlights{display:flex;flex-direction:column;gap:0;margin-top:36px;}
@@ -279,15 +283,8 @@ section{padding:68px 0;}
   padding:7px 13px;border-radius:999px;
 }
 
-.beyond{
-  margin-top:56px;padding-top:40px;border-top:1px solid var(--slate-200);
-}
-.beyond h4{font-size:14px;color:var(--slate-500);text-transform:uppercase;letter-spacing:0.05em;margin-bottom:16px;}
-.beyond-row{display:flex;gap:28px;flex-wrap:wrap;}
-.beyond-item{font-size:14.5px;color:var(--slate-700);display:flex;align-items:center;gap:8px;}
-.beyond-item .dot{width:6px;height:6px;border-radius:50%;background:var(--gold);}
-
 /* ---------- Personal Projects ---------- */
+#projects .section-head{max-width:920px;}
 .pp-grid{display:flex;flex-wrap:wrap;gap:24px;}
 .pp-card{
   background:var(--white);
