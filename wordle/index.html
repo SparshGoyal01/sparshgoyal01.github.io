@@ -191,8 +191,14 @@
   .key.absent{ background:#1b1e24; color:#787d87; }
 
   /* ---------- RESULT / LEADERBOARD ---------- */
-  #view-result{ padding-top:16px; }
+  #view-result{ padding-top:16px; padding-bottom:0; }
   #view-result > .brand{ margin-bottom:16px; }
+  .result-cta{
+    position:sticky; bottom:0; margin-top:auto;
+    padding:16px 0 calc(16px + env(safe-area-inset-bottom, 0px));
+    background:linear-gradient(to top, var(--bg) 62%, transparent);
+  }
+  .result-cta .btn{ margin-top:0; }
   .banner{ border:1px solid var(--line); background:var(--panel); border-radius:14px; padding:17px; text-align:center; margin-bottom:20px; }
   .banner.win{ border-color:var(--correct); }
   .banner .t{ font-size:18px; font-weight:800; }
@@ -313,7 +319,9 @@
   <div id="lbBody"></div>
   <p class="lb-note" id="lbNote"></p>
   <div id="tryOthers"></div>
-  <button class="btn secondary" id="homeBtn">Back to start</button>
+  <div class="result-cta">
+    <button class="btn secondary" id="homeBtn">Back to start</button>
+  </div>
 </section>
 
 <div id="toast"></div>
@@ -868,8 +876,10 @@ function persist() {
 //  RESULT + LEADERBOARD
 // ============================================================
 let lbTab = "overall";
+let resultPick = null;   // grid selected under "Try other levels"; null → CTA defaults to "Back to start"
 async function enterResult(n) {                 // n === null → opened straight from home
   stopTimer();
+  resultPick = null;     // reset the picker on every fresh visit to this view
   lbTab = n == null ? "overall" : String(n);
   $("#lbDate").textContent = new Date().toLocaleDateString(undefined, { weekday: "long", month: "short", day: "numeric" });
   $("#resultBanner").innerHTML = "";            // drop the previous grid's banner while this one loads
@@ -974,19 +984,41 @@ function renderLeaderboard(board) {
 function renderTryOthers() {
   const box = $("#tryOthers");
   const remaining = LEVELS.filter(n => !isDone(LS.loadGame(state.day, n)));
+  if (resultPick != null && !remaining.includes(resultPick)) resultPick = null; // e.g. it just got finished elsewhere
   if (!remaining.length) {
+    resultPick = null;
     box.innerHTML = `<div class="try-done">You've played all four grids today. 🎉<br>Fresh words tomorrow.</div>`;
+    updateResultCta();
     return;
   }
   box.innerHTML = `<h3>Try other levels</h3><div class="levels">${
     remaining.map(n => {
       const g = LS.loadGame(state.day, n);
-      return `<button type="button" class="level" data-lvl="${n}"><b>${n}×${n}</b><span>${g?.rows?.length ? "resume" : "play"}</span></button>`;
+      return `<button type="button" class="level${resultPick === n ? " active" : ""}" data-lvl="${n}"><b>${n}×${n}</b><span>${g?.rows?.length ? "resume" : "play"}</span></button>`;
     }).join("")
   }</div>`;
-  box.querySelectorAll("[data-lvl]").forEach(b => b.onclick = () => go(`#play/${b.dataset.lvl}`));
+  box.querySelectorAll("[data-lvl]").forEach(b => b.onclick = () => {
+    resultPick = Number(b.dataset.lvl);
+    renderTryOthers();
+  });
+  updateResultCta();
 }
-$("#homeBtn").addEventListener("click", () => go("#home"));
+function updateResultCta() {
+  const btn = $("#homeBtn");
+  if (resultPick == null) {
+    btn.textContent = "Back to start";
+    btn.classList.add("secondary");
+  } else {
+    const g = LS.loadGame(state.day, resultPick);
+    const resuming = g && !isDone(g) && g.rows?.length;
+    btn.textContent = `${resuming ? "Resume" : "Play"} ${resultPick}×${resultPick}`;
+    btn.classList.remove("secondary");
+  }
+}
+$("#homeBtn").addEventListener("click", () => {
+  if (resultPick == null) go("#home");
+  else go(`#play/${resultPick}`);
+});
 
 // ============================================================
 //  BOOT
