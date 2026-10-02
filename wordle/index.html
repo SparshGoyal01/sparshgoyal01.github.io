@@ -964,7 +964,7 @@ function renderLeaderboard(board) {
     const rows = rankOverall(board);
     body.innerHTML = rows.length ? `<table><thead><tr>
       <th>Player</th><th class="num">Solved</th><th class="num">Guesses</th><th class="num">Time</th></tr></thead><tbody>${
-      rows.map((p, i) => `<tr class="rank-${i + 1} ${p.pid === me ? "me" : ""}">
+      rows.map((p, i) => `<tr class="${p.solved > 0 ? "rank-" + (i + 1) : ""} ${p.pid === me ? "me" : ""}">
         <td>${esc(p.name)}</td><td class="num">${p.solved}/4</td>
         <td class="num">${p.attempts}</td><td class="num">${fmtTime(p.timeMs)}</td></tr>`).join("")
       }</tbody></table>` : `<div class="lb-empty">No one has played yet today.</div>`;
@@ -972,7 +972,7 @@ function renderLeaderboard(board) {
     const rows = rankLevel(board[lbTab] || {});
     body.innerHTML = rows.length ? `<table><thead><tr>
       <th>Player</th><th class="num">Guesses</th><th class="num">Time</th></tr></thead><tbody>${
-      rows.map((e, i) => `<tr class="rank-${i + 1} ${e.pid === me ? "me" : ""}">
+      rows.map((e, i) => `<tr class="${e.won ? "rank-" + (i + 1) : ""} ${e.pid === me ? "me" : ""}">
         <td>${esc(e.name)}</td>
         <td class="num">${e.won ? e.attempts + "/" + lbTab : "✕"}</td>
         <td class="num">${fmtTime(e.timeMs)}</td></tr>`).join("")
