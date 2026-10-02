@@ -52,7 +52,9 @@
   }
 
   /* ---------- view routing ---------- */
-  .view{ display:none; width:100%; max-width:560px; min-height:100vh; min-height:100dvh; padding:0 14px 28px; flex-direction:column; }
+  /* top padding = the device's safe-area inset (status bar / Dynamic Island when installed as an
+     app with edge-to-edge content); 0 in a normal browser tab, so nothing changes there */
+  .view{ display:none; width:100%; max-width:560px; min-height:100vh; min-height:100dvh; padding:env(safe-area-inset-top, 0px) 14px 28px; flex-direction:column; }
   .view.active{ display:flex; }
   #view-home.active{ justify-content:flex-start; padding-bottom:0; }
 
@@ -191,7 +193,7 @@
   .key.absent{ background:#1b1e24; color:#787d87; }
 
   /* ---------- RESULT / LEADERBOARD ---------- */
-  #view-result{ padding-top:16px; padding-bottom:0; }
+  #view-result{ padding-top:calc(16px + env(safe-area-inset-top, 0px)); padding-bottom:0; }
   #view-result > .brand{ margin-bottom:16px; }
   .result-cta{
     position:sticky; bottom:0; margin-top:auto;
@@ -245,7 +247,7 @@
   .sheet .btn{ margin-top:0; }
 
   #toast{
-    position:fixed; top:64px; left:50%; transform:translateX(-50%); background:var(--text); color:var(--bg);
+    position:fixed; top:calc(64px + env(safe-area-inset-top, 0px)); left:50%; transform:translateX(-50%); background:var(--text); color:var(--bg);
     padding:9px 16px; border-radius:8px; font-size:13px; font-weight:600; opacity:0; pointer-events:none; transition:.2s; z-index:50; max-width:90vw; text-align:center;
   }
   #toast.show{ opacity:1; }
