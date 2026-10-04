@@ -287,7 +287,7 @@
 
   <div class="home-cta">
     <button class="btn needs-name" id="playBtn" type="button">ENTER YOUR NAME</button>
-    <a class="cta-link" href="#leaderboard">View today's leaderboard →</a>
+    <a class="cta-link" id="ctaLink" href="#leaderboard">View today's leaderboard →</a>
     <div class="home-allplayed" id="homeAllPlayed" hidden>
       You've finished every grid today — fresh words tomorrow.
     </div>
@@ -552,10 +552,20 @@ function updatePlayBtn() {
   const g = state.homePick && LS.loadGame(state.day, state.homePick);
   const btn = $("#playBtn");
   btn.classList.toggle("needs-name", !named && !allDone);   // styled, but still clickable → gives feedback
-  btn.textContent = allDone ? "SEE THE LEADERBOARD"
+  btn.textContent = allDone ? "VIEW LEADERBOARD"
     : !named ? "ENTER YOUR NAME"
     : (g && !isDone(g) && g.rows?.length) ? "RESUME" : "PLAY";
+
+  // all grids done: the primary CTA already goes to the leaderboard, so the
+  // secondary one offers Practice Mode instead of repeating it
+  const link = $("#ctaLink");
+  link.dataset.mode = allDone ? "practice" : "leaderboard";
+  link.textContent = allDone ? "Play more on Practice Mode" : "View today's leaderboard →";
+  link.setAttribute("role", allDone ? "button" : "link");
 }
+$("#ctaLink").addEventListener("click", e => {
+  if ($("#ctaLink").dataset.mode === "practice") { e.preventDefault(); openPracticeSheet(); }
+});
 function nudgeName() {
   const inp = $("#homeName");
   inp.focus();
