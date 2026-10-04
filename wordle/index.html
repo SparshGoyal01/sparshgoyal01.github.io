@@ -116,8 +116,21 @@
   .btn:disabled{ opacity:.4; cursor:not-allowed; }
   .btn.needs-name{ background:var(--panel-2); color:var(--muted); box-shadow:inset 0 0 0 1px var(--line); }
   .btn.secondary{ background:var(--panel-2); color:var(--text); border:1px solid var(--line); letter-spacing:.04em; font-weight:700; }
-  .home-allplayed{ text-align:center; font-size:12.5px; color:var(--muted); margin-top:12px; }
-  .home-allplayed a{ color:var(--accent); }
+  /* shown once every grid is finished today */
+  .done-card{
+    margin-top:20px; padding:18px 14px 16px; border-radius:14px; text-align:center;
+    background:linear-gradient(180deg, rgba(58,167,87,.16), rgba(58,167,87,.04));
+    border:1px solid rgba(58,167,87,.38);
+  }
+  .done-emoji{ font-size:32px; line-height:1; animation:done-pop .6s cubic-bezier(.2,1.4,.4,1) both; }
+  .done-title{ font-size:17px; font-weight:800; margin-top:9px; }
+  .done-sub{ font-size:13px; color:var(--muted); margin-top:4px; line-height:1.45; }
+  .done-stats{ display:flex; justify-content:center; gap:8px; margin-top:14px; }
+  .done-stats div{ flex:1; max-width:112px; background:rgba(15,17,21,.5); border:1px solid var(--line); border-radius:10px; padding:9px 4px; }
+  .done-stats b{ display:block; font-family:'JetBrains Mono',monospace; font-size:16px; }
+  .done-stats span{ display:block; font-size:10px; color:var(--muted); letter-spacing:.06em; text-transform:uppercase; margin-top:3px; }
+  @keyframes done-pop{ 0%{ transform:scale(.4) rotate(-14deg); opacity:0; } 100%{ transform:scale(1) rotate(0); opacity:1; } }
+  @media (prefers-reduced-motion:reduce){ .done-emoji{ animation:none; } }
 
   .practice-entry{ display:flex; justify-content:flex-end; margin-top:18px; }
   .practice-cta{
@@ -267,6 +280,13 @@
     <label class="fld">Pick your grid</label>
     <div class="levels" id="homeLevels"></div>
 
+    <div class="done-card" id="homeAllPlayed" hidden>
+      <div class="done-emoji" id="doneEmoji">🎉</div>
+      <div class="done-title" id="doneTitle"></div>
+      <div class="done-sub" id="doneSub"></div>
+      <div class="done-stats" id="doneStats"></div>
+    </div>
+
     <details class="instructions" open>
       <summary>How to play</summary>
       <ul>
@@ -288,9 +308,6 @@
   <div class="home-cta">
     <button class="btn needs-name" id="playBtn" type="button">ENTER YOUR NAME</button>
     <a class="cta-link" id="ctaLink" href="#leaderboard">View today's leaderboard →</a>
-    <div class="home-allplayed" id="homeAllPlayed" hidden>
-      You've finished every grid today — fresh words tomorrow.
-    </div>
   </div>
 </section>
 
@@ -515,6 +532,7 @@ window.addEventListener("hashchange", route);
 // ============================================================
 //  HOME
 // ============================================================
+let homeWasAllDone = null;
 function renderHome() {
   if ($("#homeName").value !== LS.name) $("#homeName").value = LS.name;  // don't clobber a name being typed
   if (state.homePick == null || isDone(LS.loadGame(state.day, state.homePick)))
@@ -544,7 +562,34 @@ function renderHome() {
 
   const allDone = LEVELS.every(n => isDone(LS.loadGame(state.day, n)));
   $("#homeAllPlayed").hidden = !allDone;
+  if (allDone) renderDoneCard();
+  // once everything's done they don't need the rules again: start collapsed in that
+  // state. Only applied when the state changes, so it never undoes a manual toggle.
+  if (allDone !== homeWasAllDone) { $(".instructions").open = !allDone; homeWasAllDone = allDone; }
   updatePlayBtn();
+}
+// a little payoff for finishing every grid today: tone follows how the day
+// went, plus the same totals the Overall leaderboard ranks on
+function renderDoneCard() {
+  let solved = 0, guesses = 0, ms = 0;
+  for (const n of LEVELS) {
+    const g = LS.loadGame(state.day, n) || {};
+    const won = g.status === "won";
+    if (won) solved++;
+    guesses += won ? (g.rows?.length || n) : n;
+    ms += g.elapsedMs || 0;
+  }
+  const [emoji, title, sub] =
+    solved === LEVELS.length ? ["🏆", "Clean sweep!", "All four grids solved. Fresh words tomorrow."]
+    : solved > 0            ? ["🎉", "All done for today!", "You've played every grid. Fresh words tomorrow."]
+    :                         ["🌙", "All done for today!", "Tough words today — tomorrow's a fresh start."];
+  $("#doneEmoji").textContent = emoji;
+  $("#doneTitle").textContent = title;
+  $("#doneSub").textContent = sub;
+  $("#doneStats").innerHTML =
+    `<div><b>${solved}/${LEVELS.length}</b><span>solved</span></div>` +
+    `<div><b>${guesses}</b><span>guesses</span></div>` +
+    `<div><b>${fmtTime(ms)}</b><span>total time</span></div>`;
 }
 function updatePlayBtn() {
   const named = $("#homeName").value.trim().length > 0;
