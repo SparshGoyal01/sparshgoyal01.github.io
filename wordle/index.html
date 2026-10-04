@@ -70,6 +70,7 @@
   .home-cta .btn{ margin-top:0; }
   .cta-link{ display:block; text-align:center; margin-top:12px; font-size:12.5px; font-weight:600; color:var(--muted); text-decoration:none; }
   .cta-link:hover{ color:var(--text); }
+  .cta-link[hidden]{ display:none; }
   .home h1{ font-size:clamp(16px, 4.7vw, 21px); letter-spacing:.06em; text-transform:uppercase; white-space:nowrap; }
   .home .tagline{ color:var(--muted); font-size:13px; margin:8px 0 4px; line-height:1.55; }
   label.fld{ display:block; font-size:11px; text-transform:uppercase; letter-spacing:.07em; color:var(--faint); margin:20px 0 8px; font-weight:700; }
@@ -239,7 +240,9 @@
   .lb-note{ font-size:11px; color:var(--faint); margin-top:10px; line-height:1.5; }
 
   #tryOthers h3{ font-size:12px; text-transform:uppercase; letter-spacing:.07em; color:var(--faint); margin:26px 0 11px; }
-  .try-done{ text-align:center; color:var(--muted); font-size:13px; padding:18px; background:var(--panel-2); border-radius:12px; line-height:1.6; }
+  /* on the leaderboard the completion card sits under the "Ranked by…" note: give it the same
+     breathing room as the "Try other levels" heading has, and clear the sticky bar below */
+  #tryOthers .done-card{ margin-top:26px; margin-bottom:10px; }
 
   /* ---------- Practice mode sheet ---------- */
   .sheet-backdrop{
@@ -340,6 +343,7 @@
   <div id="tryOthers"></div>
   <div class="result-cta">
     <button class="btn secondary" id="homeBtn">Back to start</button>
+    <a class="cta-link" id="resultPracticeLink" href="#" role="button" hidden>Play more on Practice Mode ›</a>
   </div>
 </section>
 
@@ -570,7 +574,7 @@ function renderHome() {
 }
 // a little payoff for finishing every grid today: tone follows how the day
 // went, plus the same totals the Overall leaderboard ranks on
-function renderDoneCard() {
+function doneSummary() {
   let solved = 0, guesses = 0, ms = 0;
   for (const n of LEVELS) {
     const g = LS.loadGame(state.day, n) || {};
@@ -583,13 +587,17 @@ function renderDoneCard() {
     solved === LEVELS.length ? ["🏆", "Clean sweep!", "All four grids solved. Fresh words tomorrow."]
     : solved > 0            ? ["🎉", "All done for today!", "You've played every grid. Fresh words tomorrow."]
     :                         ["🌙", "All done for today!", "Tough words today — tomorrow's a fresh start."];
-  $("#doneEmoji").textContent = emoji;
-  $("#doneTitle").textContent = title;
-  $("#doneSub").textContent = sub;
+  return { solved, guesses, ms, emoji, title, sub };
+}
+function renderDoneCard() {
+  const s = doneSummary();
+  $("#doneEmoji").textContent = s.emoji;
+  $("#doneTitle").textContent = s.title;
+  $("#doneSub").textContent = s.sub;
   $("#doneStats").innerHTML =
-    `<div><b>${solved}/${LEVELS.length}</b><span>solved</span></div>` +
-    `<div><b>${guesses}</b><span>guesses</span></div>` +
-    `<div><b>${fmtTime(ms)}</b><span>total time</span></div>`;
+    `<div><b>${s.solved}/${LEVELS.length}</b><span>solved</span></div>` +
+    `<div><b>${s.guesses}</b><span>guesses</span></div>` +
+    `<div><b>${fmtTime(s.ms)}</b><span>total time</span></div>`;
 }
 function updatePlayBtn() {
   const named = $("#homeName").value.trim().length > 0;
@@ -605,7 +613,7 @@ function updatePlayBtn() {
   // secondary one offers Practice Mode instead of repeating it
   const link = $("#ctaLink");
   link.dataset.mode = allDone ? "practice" : "leaderboard";
-  link.textContent = allDone ? "Play more on Practice Mode" : "View today's leaderboard →";
+  link.textContent = allDone ? "Play more on Practice Mode ›" : "View today's leaderboard →";
   link.setAttribute("role", allDone ? "button" : "link");
 }
 $("#ctaLink").addEventListener("click", e => {
@@ -1044,7 +1052,9 @@ function renderTryOthers() {
   if (resultPick != null && !remaining.includes(resultPick)) resultPick = null; // e.g. it just got finished elsewhere
   if (!remaining.length) {
     resultPick = null;
-    box.innerHTML = `<div class="try-done">You've played all four grids today. 🎉<br>Fresh words tomorrow.</div>`;
+    const s = doneSummary();   // same card as the home screen, minus the stats (the Overall tab already has them)
+    box.innerHTML = `<div class="done-card"><div class="done-emoji">${s.emoji}</div>` +
+      `<div class="done-title">${s.title}</div><div class="done-sub">${s.sub}</div></div>`;
     updateResultCta();
     return;
   }
@@ -1062,8 +1072,12 @@ function renderTryOthers() {
 }
 function updateResultCta() {
   const btn = $("#homeBtn");
+  // every grid played: nothing left to pick, so the CTA is simply "Home" and a
+  // secondary link offers Practice Mode. Other states keep "Back to start".
+  const allDone = LEVELS.every(n => isDone(LS.loadGame(state.day, n)));
+  $("#resultPracticeLink").hidden = !allDone;
   if (resultPick == null) {
-    btn.textContent = "Back to start";
+    btn.textContent = allDone ? "Home" : "Back to start";
     btn.classList.add("secondary");
   } else {
     const g = LS.loadGame(state.day, resultPick);
@@ -1076,6 +1090,7 @@ $("#homeBtn").addEventListener("click", () => {
   if (resultPick == null) go("#home");
   else go(`#play/${resultPick}`);
 });
+$("#resultPracticeLink").addEventListener("click", e => { e.preventDefault(); openPracticeSheet(); });
 
 // ============================================================
 //  BOOT
